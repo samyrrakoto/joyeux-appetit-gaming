@@ -15,7 +15,7 @@ interface ResultPayload {
 }
 
 export function useNight(options: { poll?: boolean } = {}) {
-  const { player } = usePlayer()
+  const { player, setPlayer } = usePlayer()
   const night = useState<NightDto | null>('night-current', () => null)
   const pending = ref(false)
   const error = ref<string | null>(null)
@@ -35,8 +35,13 @@ export function useNight(options: { poll?: boolean } = {}) {
       night.value = await fn()
       error.value = null
     } catch (e: unknown) {
-      const err = e as { data?: { statusMessage?: string }; message?: string }
+      const err = e as { data?: { statusMessage?: string; data?: { code?: string } }; message?: string }
       error.value = err.data?.statusMessage ?? err.message ?? 'Une erreur est survenue'
+      if (err.data?.data?.code === 'PLAYER_NOT_FOUND') {
+        setPlayer(null)
+        await navigateTo('/', { replace: true })
+        return
+      }
       throw e
     } finally {
       pending.value = false

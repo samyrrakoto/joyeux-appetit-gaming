@@ -17,6 +17,7 @@ export default defineEventHandler(async (event): Promise<NightDto> => {
   }
   const game = await db.query.games.findFirst({ where: eq(schema.games.id, gameId), columns: { id: true } })
   if (!game) throw createError({ statusCode: 404, statusMessage: 'Jeu introuvable' })
+  await assertPlayerExists(db, playerId)
 
   const existing = await db.query.votes.findFirst({
     where: and(eq(schema.votes.nightId, nightId), eq(schema.votes.gameId, gameId), eq(schema.votes.playerId, playerId)),
