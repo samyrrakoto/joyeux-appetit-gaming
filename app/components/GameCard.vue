@@ -61,8 +61,12 @@ defineEmits<{ toggle: [] }>()
 }
 
 .game--voted {
-  --cover-radius: calc(var(--radius-lg) - 2px);
-  border: 2px solid var(--accent);
+  border-color: var(--accent-border-soft);
+  background: var(--accent-tint);
+}
+
+.game--voted .game__title {
+  color: var(--accent-text);
 }
 
 .game__rank {
