@@ -15,7 +15,7 @@ const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u03
 const visible = computed(() => {
   const q = normalize(filter.value.trim())
   const list = q ? games.value.filter(g => normalize(g.title).includes(q)) : games.value
-  return [...list].sort((a, b) => b.playedCount - a.playedCount || a.title.localeCompare(b.title))
+  return [...list].sort((a, b) => b.playedCount - a.playedCount || a.title.localeCompare(b.title, 'fr'))
 })
 
 const withoutCover = computed(() => games.value.filter(g => !g.coverUrl).length)
@@ -41,12 +41,7 @@ async function run(fn: () => Promise<unknown>) {
 }
 
 async function onAdd(payload: AddGameSubmit) {
-  const ok = await run(() =>
-    $fetch('/api/games', {
-      method: 'POST',
-      body: { title: payload.title, rawgId: payload.rawgId, coverUrl: payload.coverUrl },
-    }),
-  )
+  const ok = await run(() => $fetch('/api/games', { method: 'POST', body: payload }))
   if (ok) addOpen.value = false
 }
 
@@ -89,9 +84,7 @@ async function onRemove() {
           <GameCover :src="g.coverUrl" :title="g.title" radius="6px" class="game__cover" />
           <div class="game__text">
             <p class="game__title">{{ g.title }}</p>
-            <p class="hint">
-              {{ g.playedCount ? `joué ${g.playedCount} fois` : 'jamais joué' }} · {{ g.proposedCount ? `proposé ${g.proposedCount} fois` : 'jamais proposé' }}
-            </p>
+            <p class="hint">{{ g.playedCount ? `Joué ${g.playedCount} fois` : 'Jamais joué' }}</p>
             <span v-if="!g.coverUrl" class="badge" style="margin-top: 4px"><IconPhotoOff :size="11" /> sans jaquette</span>
           </div>
           <IconChevronRight :size="18" style="color: var(--text-3)" />
@@ -108,7 +101,7 @@ async function onRemove() {
       Ajouter un jeu
     </button>
 
-    <AddGameSheet :open="addOpen" :pending="pending" :error="error" mode="catalogue" @close="addOpen = false" @submit="onAdd" />
+    <AddGameSheet :open="addOpen" :pending="pending" :error="error" @close="addOpen = false" @submit="onAdd" />
     <EditGameSheet :open="!!editing" :game="editing" :pending="pending" :error="error" @close="editing = null" @save="onSave" @remove="onRemove" />
   </div>
 </template>

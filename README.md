@@ -39,9 +39,9 @@ génère une migration SQL dans `server/db/migrations`. En local, PGlite l'appli
 `npm run dev`. En production, `npm run db:migrate` l'applique sur Neon (le script `vercel-build`
 le fait automatiquement avant chaque build Vercel).
 
-Modèle : `players`, `game_nights`, `games` (catalogue global), `night_games` (jeux proposés
-pour une soirée), `votes`, `teams` (par soirée), `team_members`, `matches`, `results`
-(un résultat vise soit un joueur, soit une équipe).
+Modèle : `players`, `game_nights`, `games` (catalogue global, tous en lice chaque soir), `votes`
+(soirée + jeu + joueur), `played_games` (jeux cochés comme joués lors d'une soirée), `teams`
+(par soirée), `team_members`, `matches`, `results` (un résultat vise soit un joueur, soit une équipe).
 
 ## Déployer sur Vercel
 
@@ -63,13 +63,16 @@ shared/types.ts DTO partagés front/back
 ## Flux d'une soirée
 
 1. Accueil : choisir son profil ou en créer un, mémorisé sur l'appareil.
-2. Ce soir : voter pour un ou plusieurs jeux, en proposer de nouveaux, tout se met à jour en direct.
+2. Ce soir : tout le catalogue est en lice, chacun vote pour un ou plusieurs jeux, tout se met à
+   jour en direct. Tri par votes (défaut, à égalité les plus joués d'abord), par jeux les plus
+   joués, ou alphabétique dans les deux sens.
 3. Équipes : composer ou tirer au hasard, valider.
 4. Résultat : choisir le jeu, solo ou par équipe, saisir les scores ou classer à la main.
+   En fin de soirée, cocher les jeux réellement joués : c'est ce qui alimente « joué x fois ».
 5. Historique et Profil : soirées passées, parties, victoires, meilleurs jeux, meilleur duo.
 6. Jeux : le catalogue partagé. On y ajoute des jeux (recherche RAWG ou saisie libre), on corrige
    un titre, et on colle un lien http vers une jaquette quand aucune n'a été trouvée. Un jeu jamais
-   proposé ni joué peut être supprimé ; les autres restent car ils font partie de l'historique.
+   joué peut être supprimé ; les autres restent car ils font partie de l'historique.
 7. Clore la soirée : les votes sont figés et une nouvelle soirée démarre à la visite suivante.
 
 ## Date des soirées

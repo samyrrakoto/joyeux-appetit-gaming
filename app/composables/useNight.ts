@@ -1,13 +1,5 @@
 import type { MatchMode, NightDto, NightStatus } from '#shared/types'
 
-interface AddGamePayload {
-  gameId?: string | null
-  title: string
-  rawgId?: number | null
-  coverUrl?: string | null
-  voteNow: boolean
-}
-
 interface TeamPayload {
   id?: string
   name: string
@@ -56,21 +48,16 @@ export function useNight(options: { poll?: boolean } = {}) {
     return night.value.id
   }
 
-  const toggleVote = (nightGameId: string) =>
+  const toggleVote = (gameId: string) =>
     run(() =>
-      $fetch<NightDto>(`/api/nights/${nightId()}/games/${nightGameId}/vote`, {
+      $fetch<NightDto>(`/api/nights/${nightId()}/games/${gameId}/vote`, {
         method: 'POST',
         body: { playerId: player.value!.id },
       }),
     )
 
-  const addGame = (payload: AddGamePayload) =>
-    run(() =>
-      $fetch<NightDto>(`/api/nights/${nightId()}/games`, {
-        method: 'POST',
-        body: { ...payload, playerId: player.value!.id },
-      }),
-    )
+  const setPlayed = (gameIds: string[]) =>
+    run(() => $fetch<NightDto>(`/api/nights/${nightId()}/played`, { method: 'PUT', body: { gameIds } }))
 
   const setStatus = (status: NightStatus) =>
     run(() => $fetch<NightDto>(`/api/nights/${nightId()}`, { method: 'PATCH', body: { status } }))
@@ -99,8 +86,8 @@ export function useNight(options: { poll?: boolean } = {}) {
   const myVotes = computed(() => {
     const me = player.value?.id
     if (!night.value || !me) return new Set<string>()
-    return new Set(night.value.games.filter(g => g.voters.some(v => v.id === me)).map(g => g.id))
+    return new Set(night.value.games.filter(g => g.voters.some(v => v.id === me)).map(g => g.game.id))
   })
 
-  return { night, pending, error, refresh, toggleVote, addGame, setStatus, setDate, saveTeams, recordMatch, myVotes }
+  return { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, saveTeams, recordMatch, myVotes }
 }

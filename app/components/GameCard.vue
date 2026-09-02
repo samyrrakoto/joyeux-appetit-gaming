@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { IconCheck, IconCrown, IconThumbUp } from '@tabler/icons-vue'
+import { IconCheck, IconCrown, IconDeviceGamepad2, IconThumbUp } from '@tabler/icons-vue'
 import type { NightGameDto } from '#shared/types'
 
 defineProps<{
   item: NightGameDto
-  rank: number
+  /** Position dans le classement des votes, ou null si le tri n'est pas par votes. */
+  rank: number | null
   voted: boolean
   disabled?: boolean
 }>()
@@ -19,11 +20,16 @@ defineEmits<{ toggle: [] }>()
         <IconCrown :size="12" />
         1er
       </span>
-      <span v-else-if="item.voters.length" class="badge game__rank">{{ ordinal(rank) }}</span>
+      <span v-else-if="rank && item.voters.length" class="badge game__rank">{{ ordinal(rank) }}</span>
+      <span v-if="item.playedTonight" class="badge badge--success game__played">
+        <IconDeviceGamepad2 :size="12" />
+        Joué ce soir
+      </span>
     </GameCover>
 
     <div class="game__body">
       <h3 class="game__title">{{ item.game.title }}</h3>
+      <p class="hint">{{ item.game.playedCount ? `Joué ${item.game.playedCount} fois` : 'Jamais joué' }}</p>
 
       <div class="game__voters">
         <template v-if="item.voters.length">
@@ -71,11 +77,17 @@ defineEmits<{ toggle: [] }>()
   background: var(--surface);
 }
 
+.game__played {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
 .game__body {
   padding: 8px 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
 }
 
@@ -90,5 +102,6 @@ defineEmits<{ toggle: [] }>()
   align-items: center;
   gap: 6px;
   min-height: 20px;
+  margin: 2px 0 4px;
 }
 </style>

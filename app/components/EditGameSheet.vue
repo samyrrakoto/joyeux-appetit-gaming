@@ -34,7 +34,7 @@ const previewUrl = computed(() => {
   return /^https?:\/\/\S+$/i.test(url) ? url : null
 })
 const coverInvalid = computed(() => coverUrl.value.trim().length > 0 && !previewUrl.value)
-const deletable = computed(() => props.game && !props.game.proposedCount && !props.game.playedCount)
+const deletable = computed(() => props.game && !props.game.playedCount)
 
 function save() {
   localError.value = ''
@@ -59,10 +59,7 @@ function remove() {
       <div class="preview">
         <GameCover :src="previewUrl" :title="title" radius="8px" class="preview__cover" />
         <div class="preview__text">
-          <p class="hint">
-            {{ game.playedCount ? `Joué ${game.playedCount} fois` : 'Jamais joué' }} ·
-            {{ game.proposedCount ? `proposé ${game.proposedCount} fois` : 'jamais proposé' }}
-          </p>
+          <p class="hint">{{ game.playedCount ? `Joué ${game.playedCount} fois` : 'Jamais joué' }}</p>
           <span v-if="game.rawgId" class="badge" style="margin-top: 6px">Fiche RAWG liée</span>
           <span v-else class="badge" style="margin-top: 6px">Ajouté à la main</span>
         </div>

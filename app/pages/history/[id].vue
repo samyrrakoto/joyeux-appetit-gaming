@@ -5,6 +5,9 @@ import type { NightDto } from '#shared/types'
 const route = useRoute()
 const { data: night, error } = await useFetch<NightDto>(`/api/nights/${route.params.id}`)
 
+const votedGames = computed(() => (night.value?.games ?? []).filter(g => g.voters.length))
+const playedGames = computed(() => (night.value?.games ?? []).filter(g => g.playedTonight))
+
 const saving = ref(false)
 async function saveDate(nightDate: string) {
   saving.value = true
@@ -22,7 +25,7 @@ async function saveDate(nightDate: string) {
       <NuxtLink to="/history" class="btn btn--ghost btn--icon" aria-label="Retour"><IconArrowLeft :size="20" /></NuxtLink>
       <div style="flex: 1">
         <h1>{{ night ? formatNightDate(night.nightDate) : 'Soirée' }}</h1>
-        <p v-if="night" class="hint">{{ plural(night.players.length, 'joueur') }} · {{ plural(night.matches.length, 'partie') }}</p>
+        <p v-if="night" class="hint">{{ plural(night.players.length, 'joueur') }} · {{ plural(playedGames.length, 'jeu joué', 'jeux joués') }} · {{ plural(night.matches.length, 'partie') }}</p>
         <NightDateEditor v-if="night" :date="night.nightDate" :pending="saving" label="Changer la date" hide-date @save="saveDate" />
       </div>
     </header>
@@ -39,15 +42,27 @@ async function saveDate(nightDate: string) {
       </section>
 
       <section class="block">
+        <h2 class="block__title">Ce soir-là on a joué à</h2>
+        <ul class="poll">
+          <li v-for="g in playedGames" :key="g.game.id" class="poll__row">
+            <GameCover :src="g.game.coverUrl" :title="g.game.title" radius="4px" class="poll__cover" />
+            <span class="small" style="flex: 1; font-weight: 500">{{ g.game.title }}</span>
+            <span class="hint">{{ g.voters.length ? plural(g.voters.length, 'vote') : '' }}</span>
+          </li>
+          <li v-if="!playedGames.length" class="hint">Aucun jeu coché comme joué.</li>
+        </ul>
+      </section>
+
+      <section class="block">
         <h2 class="block__title">Le sondage</h2>
         <ul class="poll">
-          <li v-for="(g, i) in night.games" :key="g.id" class="poll__row">
-            <span class="badge" :class="{ 'badge--gold': i === 0 && g.voters.length }">{{ ordinal(i + 1) }}</span>
+          <li v-for="(g, i) in votedGames" :key="g.game.id" class="poll__row">
+            <span class="badge" :class="{ 'badge--gold': i === 0 }">{{ ordinal(i + 1) }}</span>
             <GameCover :src="g.game.coverUrl" :title="g.game.title" radius="4px" class="poll__cover" />
             <span class="small" style="flex: 1; font-weight: 500">{{ g.game.title }}</span>
             <span class="hint">{{ plural(g.voters.length, 'vote') }}</span>
           </li>
-          <li v-if="!night.games.length" class="hint">Aucun jeu proposé.</li>
+          <li v-if="!votedGames.length" class="hint">Personne n'a voté.</li>
         </ul>
       </section>
 

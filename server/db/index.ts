@@ -19,12 +19,12 @@ async function createDb(): Promise<Db> {
   const { PGlite } = await import('@electric-sql/pglite')
   const { drizzle } = await import('drizzle-orm/pglite')
   const { migrate } = await import('drizzle-orm/pglite/migrator')
-  const dataDir = resolve(process.cwd(), '.data/pglite')
+  const dataDir = resolve(process.cwd(), process.env.PGLITE_DIR ?? '.data/pglite')
   mkdirSync(dataDir, { recursive: true })
   const client = new PGlite(dataDir)
   const db = drizzle(client, { schema })
   await migrate(db, { migrationsFolder: resolve(process.cwd(), 'server/db/migrations') })
-  console.info('[db] PGlite local (.data/pglite), migrations appliquées')
+  console.info(`[db] PGlite local (${dataDir}), migrations appliquées`)
   return db as unknown as Db
 }
 

@@ -24,5 +24,5 @@ export default defineEventHandler(async (event): Promise<CatalogueGameDto> => {
     .values({ title: body.title, rawgId: body.rawgId ?? null, coverUrl: body.coverUrl ?? null })
     .returning()
 
-  return toCatalogueGameDto({ ...created!, nightGames: [], matches: [] })
+  return toCatalogueGameDto({ ...created!, playedGames: [], matches: [] })
 })

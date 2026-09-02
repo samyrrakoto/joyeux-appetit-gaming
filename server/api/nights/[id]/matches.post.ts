@@ -40,6 +40,8 @@ export default defineEventHandler(async (event): Promise<NightDto> => {
     })),
   )
 
+  await db.insert(schema.playedGames).values({ nightId, gameId: body.gameId }).onConflictDoNothing()
+
   if (night.status === 'voting') {
     await db.update(schema.gameNights).set({ status: 'playing' }).where(eq(schema.gameNights.id, nightId))
   }

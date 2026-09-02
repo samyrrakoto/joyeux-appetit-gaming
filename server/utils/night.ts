@@ -1,4 +1,4 @@
-import { desc, eq, ne } from 'drizzle-orm'
+import { asc, desc, eq, ne } from 'drizzle-orm'
 import type { MatchDto, NightDto, NightGameDto, NightSummaryDto, PlayerDto, TeamDto } from '#shared/types'
 
 export const DEFAULT_WEEKDAY = 3 // mercredi
@@ -56,7 +56,8 @@ export async function loadNight(db: Db, nightId: string): Promise<NightDto | nul
   const night = await db.query.gameNights.findFirst({
     where: eq(schema.gameNights.id, nightId),
     with: {
-      nightGames: { with: { game: true, proposer: true, votes: { with: { player: true } } } },
+      votes: { with: { player: true } },
+      playedGames: { columns: { gameId: true } },
       teams: { with: { members: { with: { player: true } } } },
       matches: {
         with: {
@@ -68,24 +69,37 @@ export async function loadNight(db: Db, nightId: string): Promise<NightDto | nul
   })
   if (!night) return null
 
+  const catalogue = await db.query.games.findMany({
+    orderBy: [asc(schema.games.title)],
+    with: { playedGames: { columns: { nightId: true } } },
+  })
+  const playedCount = new Map(catalogue.map(g => [g.id, g.playedGames.length]))
+  const playedTonight = new Set(night.playedGames.map(p => p.gameId))
+
   const playersById = new Map<string, PlayerDto>()
   const remember = (p: PlayerRow | null | undefined) => {
     if (p && !playersById.has(p.id)) playersById.set(p.id, toPlayerDto(p))
   }
 
-  const games: NightGameDto[] = night.nightGames.map(ng => {
-    remember(ng.proposer)
-    ng.votes.forEach(v => remember(v.player))
-    return {
-      id: ng.id,
-      game: { id: ng.game.id, title: ng.game.title, rawgId: ng.game.rawgId, coverUrl: ng.game.coverUrl },
-      proposedBy: ng.proposer ? toPlayerDto(ng.proposer) : null,
-      voters: ng.votes
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map(v => toPlayerDto(v.player)),
-    }
-  })
-  games.sort((a, b) => b.voters.length - a.voters.length || a.game.title.localeCompare(b.game.title))
+  const votesByGame = new Map<string, PlayerDto[]>()
+  for (const v of [...night.votes].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
+    remember(v.player)
+    const list = votesByGame.get(v.gameId) ?? []
+    list.push(toPlayerDto(v.player))
+    votesByGame.set(v.gameId, list)
+  }
+
+  const games: NightGameDto[] = catalogue.map(g => ({
+    game: toGameDto(g, g.playedGames.length),
+    voters: votesByGame.get(g.id) ?? [],
+    playedTonight: playedTonight.has(g.id),
+  }))
+  games.sort(
+    (a, b) =>
+      b.voters.length - a.voters.length ||
+      b.game.playedCount - a.game.playedCount ||
+      a.game.title.localeCompare(b.game.title, 'fr'),
+  )
 
   const teams: TeamDto[] = night.teams.map(t => {
     t.members.forEach(m => remember(m.player))
@@ -96,7 +110,7 @@ export async function loadNight(db: Db, nightId: string): Promise<NightDto | nul
     .sort((a, b) => a.playedAt.getTime() - b.playedAt.getTime())
     .map(m => ({
       id: m.id,
-      game: { id: m.game.id, title: m.game.title, rawgId: m.game.rawgId, coverUrl: m.game.coverUrl },
+      game: toGameDto(m.game, playedCount.get(m.game.id) ?? 0),
       mode: m.mode,
       playedAt: m.playedAt.toISOString(),
       results: m.results
@@ -121,7 +135,7 @@ export async function loadNight(db: Db, nightId: string): Promise<NightDto | nul
     games,
     teams,
     matches,
-    players: [...playersById.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    players: [...playersById.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
   }
 }
 
@@ -136,9 +150,11 @@ export function summarizeNight(night: NightDto): NightSummaryDto {
   }
   const winner = [...firstPlaces.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
 
+  const played = night.games.filter(g => g.playedTonight)
   const covers = [
+    ...played.map(g => g.game.coverUrl),
     ...night.matches.map(m => m.game.coverUrl),
-    ...night.games.map(g => g.game.coverUrl),
+    ...night.games.filter(g => g.voters.length).map(g => g.game.coverUrl),
   ].filter((c): c is string => Boolean(c))
 
   return {
@@ -148,6 +164,7 @@ export function summarizeNight(night: NightDto): NightSummaryDto {
     status: night.status,
     playersCount: night.players.length,
     matchesCount: night.matches.length,
+    playedCount: played.length,
     covers: [...new Set(covers)].slice(0, 3),
     winner,
   }

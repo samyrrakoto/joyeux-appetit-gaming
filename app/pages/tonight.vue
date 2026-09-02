@@ -1,18 +1,55 @@
 <script setup lang="ts">
-import { IconDoorExit, IconPlus, IconRefresh, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
-import type { AddGameSubmit } from '#shared/types'
+import { IconDeviceGamepad2, IconDoorExit, IconRefresh, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
+import type { GameSort, NightGameDto } from '#shared/types'
+
+const SORT_KEY = 'joyeux-appetit-gaming:sort'
+const SORTS: { value: GameSort; label: string }[] = [
+  { value: 'votes', label: 'Votes' },
+  { value: 'played', label: 'Joués' },
+  { value: 'alpha-asc', label: 'A→Z' },
+  { value: 'alpha-desc', label: 'Z→A' },
+]
 
 const { player } = usePlayer()
-const { night, pending, error, refresh, toggleVote, addGame, setStatus, setDate, myVotes } = useNight({ poll: true })
+const { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, myVotes } = useNight({ poll: true })
 await refresh()
 
-const sheetOpen = ref(false)
+const sort = ref<GameSort>((localStorage.getItem(SORT_KEY) as GameSort | null) ?? 'votes')
+watch(sort, s => localStorage.setItem(SORT_KEY, s))
+
+const playedOpen = ref(false)
 
 const others = computed(() => (night.value?.players ?? []).filter(p => p.id !== player.value?.id))
 
-async function onAddGame(payload: AddGameSubmit) {
-  await addGame(payload)
-  sheetOpen.value = false
+const byTitle = (a: NightGameDto, b: NightGameDto) => a.game.title.localeCompare(b.game.title, 'fr')
+
+const sortedGames = computed(() => {
+  const list = [...(night.value?.games ?? [])]
+  switch (sort.value) {
+    case 'played':
+      return list.sort((a, b) => b.game.playedCount - a.game.playedCount || byTitle(a, b))
+    case 'alpha-asc':
+      return list.sort(byTitle)
+    case 'alpha-desc':
+      return list.sort((a, b) => byTitle(b, a))
+    default:
+      return list.sort((a, b) => b.voters.length - a.voters.length || b.game.playedCount - a.game.playedCount || byTitle(a, b))
+  }
+})
+
+/** Rang dans le classement des votes, affiché seulement quand on trie par votes. */
+const voteRank = computed(() => {
+  const ranks = new Map<string, number>()
+  if (sort.value !== 'votes') return ranks
+  sortedGames.value.forEach((g, i) => ranks.set(g.game.id, i + 1))
+  return ranks
+})
+
+const playedTonight = computed(() => (night.value?.games ?? []).filter(g => g.playedTonight))
+
+async function onSavePlayed(gameIds: string[]) {
+  await setPlayed(gameIds)
+  playedOpen.value = false
 }
 
 async function closeNight() {
@@ -48,30 +85,57 @@ async function closeNight() {
 
     <p v-if="error" class="error" style="margin-bottom: 12px">{{ error }}</p>
 
+    <div v-if="night.games.length" class="segmented" style="margin-bottom: 12px" role="tablist" aria-label="Tri des jeux">
+      <button
+        v-for="s in SORTS"
+        :key="s.value"
+        type="button"
+        class="segmented__item"
+        :class="{ 'segmented__item--active': sort === s.value }"
+        @click="sort = s.value"
+      >
+        {{ s.label }}
+      </button>
+    </div>
+
     <div v-if="night.games.length" class="grid">
       <GameCard
-        v-for="(item, i) in night.games"
-        :key="item.id"
+        v-for="item in sortedGames"
+        :key="item.game.id"
         :item="item"
-        :rank="i + 1"
-        :voted="myVotes.has(item.id)"
+        :rank="voteRank.get(item.game.id) ?? null"
+        :voted="myVotes.has(item.game.id)"
         :disabled="pending || night.status === 'closed'"
-        @toggle="toggleVote(item.id)"
+        @toggle="toggleVote(item.game.id)"
       />
     </div>
     <div v-else class="empty card">
-      <h3>Aucun jeu proposé</h3>
-      <p class="small">Sois le premier à lancer une idée pour ce soir.</p>
+      <h3>Le catalogue est vide</h3>
+      <p class="small">Ajoute vos jeux dans l’onglet Jeux, ils seront tous en lice chaque soir.</p>
+      <NuxtLink to="/games" class="btn btn--sm" style="margin-top: 10px">Ouvrir le catalogue</NuxtLink>
     </div>
 
-    <button type="button" class="btn btn--dashed btn--block" style="margin-top: 12px" @click="sheetOpen = true">
-      <IconPlus :size="18" />
-      Proposer un jeu
-    </button>
+    <p v-if="night.games.length" class="hint" style="text-align: center; margin-top: 10px">
+      Il manque un jeu ? <NuxtLink to="/games" style="color: var(--accent)">Ajoute-le au catalogue</NuxtLink>, il apparaîtra ici.
+    </p>
 
     <section class="section">
       <div class="title-row">
-        <h2>Parties du soir</h2>
+        <h2>Ce soir on a joué à</h2>
+        <button type="button" class="btn btn--sm" @click="playedOpen = true">
+          <IconDeviceGamepad2 :size="15" />
+          Cocher
+        </button>
+      </div>
+      <div v-if="playedTonight.length" class="played">
+        <span v-for="g in playedTonight" :key="g.game.id" class="badge badge--success">{{ g.game.title }}</span>
+      </div>
+      <p v-else class="hint">Rien de coché pour l’instant. En fin de soirée, coche les jeux réellement joués.</p>
+    </section>
+
+    <section class="section">
+      <div class="title-row">
+        <h2>Parties et scores</h2>
         <span v-if="night.teams.length" class="hint">{{ plural(night.teams.length, 'équipe') }}</span>
       </div>
 
@@ -92,7 +156,7 @@ async function closeNight() {
           </div>
         </li>
       </ul>
-      <p v-else class="hint" style="margin-bottom: 12px">Aucune partie enregistrée pour l'instant.</p>
+      <p v-else class="hint" style="margin-bottom: 12px">Aucun score enregistré pour l’instant.</p>
 
       <div class="row">
         <NuxtLink to="/teams" class="btn" style="flex: 1">
@@ -111,7 +175,7 @@ async function closeNight() {
       Clore la soirée
     </button>
 
-    <AddGameSheet :open="sheetOpen" :pending="pending" @close="sheetOpen = false" @submit="onAddGame" />
+    <PlayedGamesSheet :open="playedOpen" :games="night.games" :pending="pending" :error="error" @close="playedOpen = false" @save="onSavePlayed" />
   </div>
 </template>
 
@@ -152,6 +216,12 @@ async function closeNight() {
 
 .section {
   margin-top: 28px;
+}
+
+.played {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .matches {

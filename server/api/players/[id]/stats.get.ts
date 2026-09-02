@@ -10,7 +10,7 @@ export default defineEventHandler(async (event): Promise<PlayerStatsDto> => {
 
   const allMatches = await db.query.matches.findMany({
     with: {
-      game: true,
+      game: { with: { playedGames: { columns: { nightId: true } } } },
       night: { columns: { id: true, nightDate: true } },
       results: { with: { team: { with: { members: { with: { player: true } } } } } },
     },
@@ -21,11 +21,11 @@ export default defineEventHandler(async (event): Promise<PlayerStatsDto> => {
 
   const myVotes = await db.query.votes.findMany({
     where: eq(schema.votes.playerId, id),
-    with: { nightGame: { with: { night: { columns: { id: true, nightDate: true } } } } },
+    with: { night: { columns: { id: true, nightDate: true } } },
   })
   for (const v of myVotes) {
-    nights.add(v.nightGame.night.id)
-    if (!firstNight || v.nightGame.night.nightDate < firstNight) firstNight = v.nightGame.night.nightDate
+    nights.add(v.night.id)
+    if (!firstNight || v.night.nightDate < firstNight) firstNight = v.night.nightDate
   }
   let matchesCount = 0
   let winsCount = 0
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event): Promise<PlayerStatsDto> => {
     if (won) winsCount++
 
     const g = perGame.get(m.game.id) ?? {
-      game: { id: m.game.id, title: m.game.title, rawgId: m.game.rawgId, coverUrl: m.game.coverUrl },
+      game: { id: m.game.id, title: m.game.title, rawgId: m.game.rawgId, coverUrl: m.game.coverUrl, playedCount: m.game.playedGames.length },
       played: 0,
       wins: 0,
     }

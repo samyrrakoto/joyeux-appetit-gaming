@@ -3,8 +3,6 @@ import { IconBooks, IconCheck, IconPlus, IconRefresh, IconSearch } from '@tabler
 import type { AddGameSubmit, CatalogueGameDto, RawgSuggestion } from '#shared/types'
 
 interface Picked {
-  source: 'catalogue' | 'rawg' | 'free'
-  gameId: string | null
   rawgId: number | null
   title: string
   coverUrl: string | null
@@ -15,10 +13,9 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     pending?: boolean
-    mode?: 'night' | 'catalogue'
     error?: string | null
   }>(),
-  { pending: false, mode: 'night', error: null },
+  { pending: false, error: null },
 )
 const emit = defineEmits<{ close: []; submit: [payload: AddGameSubmit] }>()
 
@@ -29,17 +26,16 @@ const rawgConfigured = ref(true)
 const catalogue = ref<CatalogueGameDto[]>([])
 const picked = ref<Picked | null>(null)
 const manualCover = ref('')
-const voteNow = ref(true)
 const localError = ref('')
 
 let debounce: ReturnType<typeof setTimeout> | undefined
 
 const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-const catalogueMatches = computed(() => {
+const alreadyInCatalogue = computed(() => {
   const q = normalize(query.value.trim())
   if (q.length < 2) return []
-  return catalogue.value.filter(g => normalize(g.title).includes(q)).slice(0, 4)
+  return catalogue.value.filter(g => normalize(g.title).includes(q)).slice(0, 3)
 })
 
 const rawgResults = computed(() => {
@@ -76,7 +72,6 @@ watch(
     suggestions.value = []
     picked.value = null
     manualCover.value = ''
-    voteNow.value = true
     localError.value = ''
     catalogue.value = await $fetch<CatalogueGameDto[]>('/api/games').catch(() => [])
   },
@@ -95,21 +90,8 @@ async function searchRawg() {
   }
 }
 
-function pickCatalogue(g: CatalogueGameDto) {
-  picked.value = {
-    source: 'catalogue',
-    gameId: g.id,
-    rawgId: g.rawgId,
-    title: g.title,
-    coverUrl: g.coverUrl,
-    meta: g.playedCount ? `Déjà joué ${g.playedCount} fois` : 'Dans le catalogue',
-  }
-}
-
 function pickRawg(s: RawgSuggestion) {
   picked.value = {
-    source: 'rawg',
-    gameId: null,
     rawgId: s.rawgId,
     title: s.title,
     coverUrl: s.coverUrl,
@@ -123,25 +105,17 @@ function pickFree() {
     localError.value = 'Entre un titre'
     return
   }
-  picked.value = { source: 'free', gameId: null, rawgId: null, title, coverUrl: null, meta: 'Ajouté à la main' }
+  picked.value = { rawgId: null, title, coverUrl: null, meta: 'Ajouté à la main' }
 }
 
 function submit() {
   if (!picked.value || manualCoverInvalid.value) return
-  emit('submit', {
-    gameId: picked.value.gameId,
-    title: picked.value.title,
-    rawgId: picked.value.rawgId,
-    coverUrl: effectiveCover.value,
-    voteNow: props.mode === 'night' && voteNow.value,
-  })
+  emit('submit', { title: picked.value.title, rawgId: picked.value.rawgId, coverUrl: effectiveCover.value })
 }
-
-const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajouter un jeu au catalogue'))
 </script>
 
 <template>
-  <BottomSheet :open="open" :title="title" @close="emit('close')">
+  <BottomSheet :open="open" title="Ajouter un jeu au catalogue" @close="emit('close')">
     <template v-if="!picked">
       <div>
         <label class="label" for="game-title">Titre du jeu</label>
@@ -154,42 +128,29 @@ const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajou
             placeholder="Mario Kart, Overcooked, Jackbox…"
             autocomplete="off"
             autofocus
-            @keydown.enter.prevent="catalogueMatches[0] && mode === 'night' ? pickCatalogue(catalogueMatches[0]) : rawgResults[0] ? pickRawg(rawgResults[0]) : pickFree()"
+            @keydown.enter.prevent="rawgResults[0] ? pickRawg(rawgResults[0]) : pickFree()"
           />
           <IconSearch class="search__icon" :size="18" />
         </div>
         <p v-if="localError" class="error" style="margin-top: 6px">{{ localError }}</p>
       </div>
 
-      <div v-if="catalogueMatches.length">
-        <p class="group-label"><IconBooks :size="13" /> {{ mode === 'night' ? 'Dans le catalogue' : 'Déjà dans le catalogue' }}</p>
-        <ul class="suggestions">
-          <li v-for="g in catalogueMatches" :key="g.id">
-            <button type="button" class="suggestion" :disabled="mode === 'catalogue'" @click="pickCatalogue(g)">
-              <GameCover :src="g.coverUrl" :title="g.title" radius="6px" class="suggestion__cover" />
-              <span class="suggestion__text">
-                <span class="suggestion__title">{{ g.title }}</span>
-                <span class="hint">{{ g.playedCount ? `joué ${g.playedCount} fois` : g.proposedCount ? `proposé ${g.proposedCount} fois` : 'jamais joué' }}</span>
-              </span>
-            </button>
-          </li>
-        </ul>
-      </div>
+      <p v-if="alreadyInCatalogue.length" class="hint row" style="gap: 6px; flex-wrap: wrap">
+        <IconBooks :size="14" />
+        Déjà dans le catalogue : {{ alreadyInCatalogue.map(g => g.title).join(', ') }}
+      </p>
 
-      <div v-if="rawgResults.length">
-        <p v-if="catalogueMatches.length" class="group-label"><IconSearch :size="13" /> Nouveaux jeux</p>
-        <ul class="suggestions">
-          <li v-for="s in rawgResults" :key="s.rawgId">
-            <button type="button" class="suggestion" @click="pickRawg(s)">
-              <GameCover :src="s.coverUrl" :title="s.title" radius="6px" class="suggestion__cover" />
-              <span class="suggestion__text">
-                <span class="suggestion__title">{{ s.title }}</span>
-                <span class="hint">{{ [s.released?.slice(0, 4), s.platforms.join(', ')].filter(Boolean).join(' · ') }}</span>
-              </span>
-            </button>
-          </li>
-        </ul>
-      </div>
+      <ul v-if="rawgResults.length" class="suggestions">
+        <li v-for="s in rawgResults" :key="s.rawgId">
+          <button type="button" class="suggestion" @click="pickRawg(s)">
+            <GameCover :src="s.coverUrl" :title="s.title" radius="6px" class="suggestion__cover" />
+            <span class="suggestion__text">
+              <span class="suggestion__title">{{ s.title }}</span>
+              <span class="hint">{{ [s.released?.slice(0, 4), s.platforms.join(', ')].filter(Boolean).join(' · ') }}</span>
+            </span>
+          </button>
+        </li>
+      </ul>
 
       <p v-if="searching && !rawgResults.length" class="hint">Recherche en cours…</p>
       <p v-else-if="!rawgConfigured && query.length >= 2" class="hint">
@@ -224,13 +185,7 @@ const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajou
         </div>
       </div>
 
-      <CoverUrlField v-if="!picked.coverUrl && picked.source !== 'catalogue'" v-model="manualCover" />
-      <p v-else-if="!picked.coverUrl" class="hint">Ce jeu n’a pas de jaquette : tu peux en ajouter une depuis l’onglet Jeux.</p>
-
-      <label v-if="mode === 'night'" class="check">
-        <input v-model="voteNow" type="checkbox" />
-        Voter pour ce jeu tout de suite
-      </label>
+      <CoverUrlField v-if="!picked.coverUrl" v-model="manualCover" />
 
       <p v-if="error" class="error">{{ error }}</p>
 
@@ -238,7 +193,7 @@ const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajou
         <button type="button" class="btn" style="flex: 1" @click="picked = null">Retour</button>
         <button type="button" class="btn btn--primary" style="flex: 2" :disabled="pending || manualCoverInvalid" @click="submit">
           <IconPlus :size="16" />
-          {{ mode === 'night' ? 'Ajouter au sondage' : 'Ajouter au catalogue' }}
+          Ajouter au catalogue
         </button>
       </div>
     </template>
@@ -259,16 +214,6 @@ const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajou
   right: 12px;
   top: 13px;
   color: var(--text-3);
-}
-
-.group-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  margin-bottom: 6px;
 }
 
 .suggestions {
@@ -296,13 +241,8 @@ const title = computed(() => (props.mode === 'night' ? 'Proposer un jeu' : 'Ajou
   color: inherit;
 }
 
-.suggestion:hover:not(:disabled) {
+.suggestion:hover {
   background: var(--surface-2);
-}
-
-.suggestion:disabled {
-  cursor: default;
-  opacity: 0.7;
 }
 
 .suggestion__cover {

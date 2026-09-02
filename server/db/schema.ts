@@ -34,27 +34,27 @@ export const games = pgTable('games', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const nightGames = pgTable(
-  'night_games',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    nightId: uuid('night_id').notNull().references(() => gameNights.id, { onDelete: 'cascade' }),
-    gameId: uuid('game_id').notNull().references(() => games.id),
-    proposedBy: uuid('proposed_by').references(() => players.id),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  t => [uniqueIndex('night_games_night_game_idx').on(t.nightId, t.gameId)],
-)
-
 export const votes = pgTable(
   'votes',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    nightGameId: uuid('night_game_id').notNull().references(() => nightGames.id, { onDelete: 'cascade' }),
+    nightId: uuid('night_id').notNull().references(() => gameNights.id, { onDelete: 'cascade' }),
+    gameId: uuid('game_id').notNull().references(() => games.id, { onDelete: 'cascade' }),
     playerId: uuid('player_id').notNull().references(() => players.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  t => [uniqueIndex('votes_player_night_game_idx').on(t.nightGameId, t.playerId)],
+  t => [uniqueIndex('votes_night_game_player_idx').on(t.nightId, t.gameId, t.playerId)],
+)
+
+/** Jeux réellement joués au cours d'une soirée, cochés en fin de soirée. */
+export const playedGames = pgTable(
+  'played_games',
+  {
+    nightId: uuid('night_id').notNull().references(() => gameNights.id, { onDelete: 'cascade' }),
+    gameId: uuid('game_id').notNull().references(() => games.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  t => [primaryKey({ columns: [t.nightId, t.gameId] })],
 )
 
 export const teams = pgTable('teams', {
@@ -106,26 +106,27 @@ export const playersRelations = relations(players, ({ many }) => ({
 }))
 
 export const gameNightsRelations = relations(gameNights, ({ many }) => ({
-  nightGames: many(nightGames),
+  votes: many(votes),
+  playedGames: many(playedGames),
   teams: many(teams),
   matches: many(matches),
 }))
 
 export const gamesRelations = relations(games, ({ many }) => ({
-  nightGames: many(nightGames),
+  votes: many(votes),
+  playedGames: many(playedGames),
   matches: many(matches),
 }))
 
-export const nightGamesRelations = relations(nightGames, ({ one, many }) => ({
-  night: one(gameNights, { fields: [nightGames.nightId], references: [gameNights.id] }),
-  game: one(games, { fields: [nightGames.gameId], references: [games.id] }),
-  proposer: one(players, { fields: [nightGames.proposedBy], references: [players.id] }),
-  votes: many(votes),
+export const votesRelations = relations(votes, ({ one }) => ({
+  night: one(gameNights, { fields: [votes.nightId], references: [gameNights.id] }),
+  game: one(games, { fields: [votes.gameId], references: [games.id] }),
+  player: one(players, { fields: [votes.playerId], references: [players.id] }),
 }))
 
-export const votesRelations = relations(votes, ({ one }) => ({
-  nightGame: one(nightGames, { fields: [votes.nightGameId], references: [nightGames.id] }),
-  player: one(players, { fields: [votes.playerId], references: [players.id] }),
+export const playedGamesRelations = relations(playedGames, ({ one }) => ({
+  night: one(gameNights, { fields: [playedGames.nightId], references: [gameNights.id] }),
+  game: one(games, { fields: [playedGames.gameId], references: [games.id] }),
 }))
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({

@@ -18,23 +18,23 @@ interface Row {
 const { night, pending, error, refresh, recordMatch } = useNight()
 await refresh()
 
-const gameId = ref(night.value?.games[0]?.game.id ?? night.value?.matches[0]?.game.id ?? '')
+const gameOptions = computed(() =>
+  [...(night.value?.games ?? [])]
+    .sort(
+      (a, b) =>
+        Number(b.playedTonight) - Number(a.playedTonight) ||
+        b.voters.length - a.voters.length ||
+        a.game.title.localeCompare(b.game.title, 'fr'),
+    )
+    .map(g => ({ id: g.game.id, title: g.game.title, hint: g.playedTonight ? 'joué ce soir' : g.voters.length ? plural(g.voters.length, 'vote') : '' })),
+)
+
+const gameId = ref(gameOptions.value[0]?.id ?? '')
 const mode = ref<MatchMode>(night.value?.teams.length ? 'team' : 'solo')
 const manual = ref(false)
 const formError = ref('')
 
-const gameOptions = computed(() => {
-  const seen = new Map<string, string>()
-  night.value?.games.forEach(g => seen.set(g.game.id, g.game.title))
-  night.value?.matches.forEach(m => seen.set(m.game.id, m.game.title))
-  return [...seen.entries()].map(([id, title]) => ({ id, title }))
-})
-
-const selectedGame = computed(() => {
-  const ng = night.value?.games.find(g => g.game.id === gameId.value)
-  if (ng) return ng.game
-  return night.value?.matches.find(m => m.game.id === gameId.value)?.game ?? null
-})
+const selectedGame = computed(() => night.value?.games.find(g => g.game.id === gameId.value)?.game ?? null)
 
 const rows = ref<Row[]>([])
 
@@ -123,8 +123,8 @@ async function submit() {
     </header>
 
     <div v-if="!gameOptions.length" class="empty card">
-      <h3>Aucun jeu ce soir</h3>
-      <p class="small">Propose d'abord un jeu depuis l'onglet Ce soir.</p>
+      <h3>Le catalogue est vide</h3>
+      <p class="small">Ajoute d'abord un jeu depuis l'onglet Jeux.</p>
     </div>
 
     <template v-else>
@@ -133,7 +133,7 @@ async function submit() {
         <div style="flex: 1; min-width: 0">
           <label class="label" for="game">Jeu joué</label>
           <select id="game" v-model="gameId" class="input" style="height: 40px">
-            <option v-for="g in gameOptions" :key="g.id" :value="g.id">{{ g.title }}</option>
+            <option v-for="g in gameOptions" :key="g.id" :value="g.id">{{ g.title }}<template v-if="g.hint"> · {{ g.hint }}</template></option>
           </select>
         </div>
       </div>

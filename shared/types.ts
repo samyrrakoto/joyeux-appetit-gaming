@@ -1,5 +1,6 @@
 export type NightStatus = 'voting' | 'playing' | 'closed'
 export type MatchMode = 'solo' | 'team'
+export type GameSort = 'votes' | 'played' | 'alpha-asc' | 'alpha-desc'
 
 export interface PlayerDto {
   id: string
@@ -13,19 +14,18 @@ export interface GameDto {
   title: string
   rawgId: number | null
   coverUrl: string | null
+  /** Nombre de soirées où le jeu a été coché comme joué. */
+  playedCount: number
 }
 
 export interface CatalogueGameDto extends GameDto {
-  proposedCount: number
-  playedCount: number
   createdAt: string
 }
 
 export interface NightGameDto {
-  id: string
   game: GameDto
-  proposedBy: PlayerDto | null
   voters: PlayerDto[]
+  playedTonight: boolean
 }
 
 export interface TeamDto {
@@ -56,6 +56,7 @@ export interface NightDto {
   nightDate: string
   title: string | null
   status: NightStatus
+  /** Tout le catalogue, avec les votes de la soirée. */
   games: NightGameDto[]
   teams: TeamDto[]
   matches: MatchDto[]
@@ -69,6 +70,7 @@ export interface NightSummaryDto {
   status: NightStatus
   playersCount: number
   matchesCount: number
+  playedCount: number
   covers: string[]
   winner: string | null
 }
@@ -93,9 +95,7 @@ export interface PlayerStatsDto {
 }
 
 export interface AddGameSubmit {
-  gameId: string | null
   title: string
   rawgId: number | null
   coverUrl: string | null
-  voteNow: boolean
 }

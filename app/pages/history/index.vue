@@ -34,7 +34,7 @@ const statusLabel: Record<string, string> = { voting: 'votes en cours', playing:
               <span v-if="n.status !== 'closed'" class="badge badge--accent" style="margin-left: 6px">{{ statusLabel[n.status] }}</span>
             </p>
             <p class="hint">
-              {{ plural(n.playersCount, 'joueur') }} · {{ plural(n.matchesCount, 'partie') }}<template v-if="n.winner"> · gagnant : {{ n.winner }}</template>
+              {{ plural(n.playersCount, 'joueur') }} · {{ plural(n.playedCount, 'jeu joué', 'jeux joués') }}<template v-if="n.winner"> · gagnant : {{ n.winner }}</template>
             </p>
           </div>
           <IconChevronRight :size="18" style="color: var(--text-3)" />
