@@ -66,8 +66,12 @@ defineEmits<{ toggle: [] }>()
 }
 
 .grow--voted {
-  border: 2px solid var(--accent);
-  padding: 6px 7px;
+  border-color: var(--accent-border-soft);
+  background: var(--accent-tint);
+}
+
+.grow--voted .grow__title {
+  color: var(--accent-text);
 }
 
 .grow__rank {
