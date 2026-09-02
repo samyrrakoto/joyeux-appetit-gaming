@@ -138,7 +138,12 @@ defineEmits<{ toggle: [] }>()
   align-items: center;
   font-size: 11px;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.grow__meta > .hint {
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .grow__meta :deep(.voters__trigger) {
