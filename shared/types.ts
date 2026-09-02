@@ -15,6 +15,12 @@ export interface GameDto {
   coverUrl: string | null
 }
 
+export interface CatalogueGameDto extends GameDto {
+  proposedCount: number
+  playedCount: number
+  createdAt: string
+}
+
 export interface NightGameDto {
   id: string
   game: GameDto
@@ -84,4 +90,12 @@ export interface PlayerStatsDto {
   firstNight: string | null
   topGames: { game: GameDto; played: number; wins: number }[]
   bestPartner: { player: PlayerDto; together: number; wins: number } | null
+}
+
+export interface AddGameSubmit {
+  gameId: string | null
+  title: string
+  rawgId: number | null
+  coverUrl: string | null
+  voteNow: boolean
 }

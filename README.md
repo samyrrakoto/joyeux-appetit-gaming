@@ -67,7 +67,10 @@ shared/types.ts DTO partagés front/back
 3. Équipes : composer ou tirer au hasard, valider.
 4. Résultat : choisir le jeu, solo ou par équipe, saisir les scores ou classer à la main.
 5. Historique et Profil : soirées passées, parties, victoires, meilleurs jeux, meilleur duo.
-6. Clore la soirée : les votes sont figés et une nouvelle soirée démarre à la visite suivante.
+6. Jeux : le catalogue partagé. On y ajoute des jeux (recherche RAWG ou saisie libre), on corrige
+   un titre, et on colle un lien http vers une jaquette quand aucune n'a été trouvée. Un jeu jamais
+   proposé ni joué peut être supprimé ; les autres restent car ils font partie de l'historique.
+7. Clore la soirée : les votes sont figés et une nouvelle soirée démarre à la visite suivante.
 
 ## Date des soirées
 

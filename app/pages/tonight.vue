@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { IconDoorExit, IconPlus, IconRefresh, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
+import type { AddGameSubmit } from '#shared/types'
 
 const { player } = usePlayer()
 const { night, pending, error, refresh, toggleVote, addGame, setStatus, setDate, myVotes } = useNight({ poll: true })
@@ -9,7 +10,7 @@ const sheetOpen = ref(false)
 
 const others = computed(() => (night.value?.players ?? []).filter(p => p.id !== player.value?.id))
 
-async function onAddGame(payload: { title: string; rawgId: number | null; coverUrl: string | null; voteNow: boolean }) {
+async function onAddGame(payload: AddGameSubmit) {
   await addGame(payload)
   sheetOpen.value = false
 }

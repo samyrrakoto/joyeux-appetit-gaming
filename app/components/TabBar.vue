@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { IconConfetti, IconHistory, IconUser } from '@tabler/icons-vue'
+import { IconConfetti, IconDeviceGamepad2, IconHistory, IconUser } from '@tabler/icons-vue'
 
 const tabs = [
   { to: '/tonight', label: 'Ce soir', icon: IconConfetti },
+  { to: '/games', label: 'Jeux', icon: IconDeviceGamepad2 },
   { to: '/history', label: 'Historique', icon: IconHistory },
   { to: '/profile', label: 'Profil', icon: IconUser },
 ]
@@ -44,7 +45,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 80px;
+  min-width: 64px;
   font-size: 11px;
   color: var(--text-3);
 }

@@ -1,6 +1,7 @@
 import type { MatchMode, NightDto, NightStatus } from '#shared/types'
 
 interface AddGamePayload {
+  gameId?: string | null
   title: string
   rawgId?: number | null
   coverUrl?: string | null

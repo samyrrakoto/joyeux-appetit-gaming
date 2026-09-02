@@ -4,6 +4,7 @@ import type { NightDto } from '#shared/types'
 
 const bodySchema = z.object({
   playerId: z.string().uuid(),
+  gameId: z.string().uuid().nullable().optional(),
   title: z.string().trim().min(1, 'Entre un titre').max(120),
   rawgId: z.number().int().positive().nullable().optional(),
   coverUrl: z.string().url().nullable().optional(),
@@ -18,9 +19,12 @@ export default defineEventHandler(async (event): Promise<NightDto> => {
   const night = await db.query.gameNights.findFirst({ where: eq(schema.gameNights.id, nightId) })
   if (!night) throw createError({ statusCode: 404, statusMessage: 'Soirée introuvable' })
 
-  let game = body.rawgId
-    ? await db.query.games.findFirst({ where: eq(schema.games.rawgId, body.rawgId) })
-    : await db.query.games.findFirst({ where: sql`lower(${schema.games.title}) = lower(${body.title})` })
+  let game = body.gameId
+    ? await db.query.games.findFirst({ where: eq(schema.games.id, body.gameId) })
+    : body.rawgId
+      ? await db.query.games.findFirst({ where: eq(schema.games.rawgId, body.rawgId) })
+      : await db.query.games.findFirst({ where: sql`lower(${schema.games.title}) = lower(${body.title})` })
+  if (body.gameId && !game) throw createError({ statusCode: 404, statusMessage: 'Jeu introuvable dans le catalogue' })
 
   if (!game) {
     ;[game] = await db
