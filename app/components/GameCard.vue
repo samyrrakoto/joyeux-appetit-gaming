@@ -15,7 +15,7 @@ defineEmits<{ toggle: [] }>()
 
 <template>
   <article class="game" :class="{ 'game--voted': voted }">
-    <GameCover :src="item.game.coverUrl" :title="item.game.title">
+    <GameCover :src="item.game.coverUrl" :title="item.game.title" radius="var(--cover-radius) var(--cover-radius) 0 0">
       <span v-if="rank === 1 && item.voters.length" class="badge badge--gold game__rank">
         <IconCrown :size="12" />
         1er
@@ -32,13 +32,7 @@ defineEmits<{ toggle: [] }>()
       <p class="hint">{{ item.game.playedCount ? `Joué ${item.game.playedCount} fois` : 'Jamais joué' }}</p>
 
       <div class="game__voters">
-        <template v-if="item.voters.length">
-          <div class="avatar-stack">
-            <AppAvatar v-for="v in item.voters.slice(0, 5)" :key="v.id" :avatar="v.avatar" :size="20" />
-          </div>
-          <span class="hint">{{ plural(item.voters.length, 'vote') }}</span>
-        </template>
-        <span v-else class="hint">Aucun vote pour l'instant</span>
+        <VotersPopover :voters="item.voters" :size="28" :max="4" />
       </div>
 
       <button
@@ -58,15 +52,16 @@ defineEmits<{ toggle: [] }>()
 
 <style scoped>
 .game {
+  --cover-radius: calc(var(--radius-lg) - 1px);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .game--voted {
+  --cover-radius: calc(var(--radius-lg) - 2px);
   border: 2px solid var(--accent);
 }
 
@@ -100,8 +95,7 @@ defineEmits<{ toggle: [] }>()
 .game__voters {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 20px;
-  margin: 2px 0 4px;
+  min-height: 28px;
+  margin: 2px 0 6px;
 }
 </style>

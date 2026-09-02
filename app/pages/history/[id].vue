@@ -60,7 +60,7 @@ async function saveDate(nightDate: string) {
             <span class="badge" :class="{ 'badge--gold': i === 0 }">{{ ordinal(i + 1) }}</span>
             <GameCover :src="g.game.coverUrl" :title="g.game.title" radius="4px" class="poll__cover" />
             <span class="small" style="flex: 1; font-weight: 500">{{ g.game.title }}</span>
-            <span class="hint">{{ plural(g.voters.length, 'vote') }}</span>
+            <VotersPopover :voters="g.voters" :size="24" :max="3" align="right" />
           </li>
           <li v-if="!votedGames.length" class="hint">Personne n'a voté.</li>
         </ul>
