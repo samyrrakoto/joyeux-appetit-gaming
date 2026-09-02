@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { IconDeviceGamepad2, IconDoorExit, IconRefresh, IconTrash, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
+import { IconDeviceGamepad2, IconDoorExit, IconLayoutGrid, IconList, IconRefresh, IconTrash, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
 import type { GameSort, NightGameDto } from '#shared/types'
 
 const SORT_KEY = 'joyeux-appetit-gaming:sort'
+const VIEW_KEY = 'joyeux-appetit-gaming:view'
+type GameView = 'grid' | 'list'
 const SORTS: { value: GameSort; label: string }[] = [
   { value: 'votes', label: 'Votes' },
   { value: 'played', label: 'Joués' },
@@ -16,6 +18,9 @@ await refresh()
 
 const sort = ref<GameSort>((localStorage.getItem(SORT_KEY) as GameSort | null) ?? 'votes')
 watch(sort, s => localStorage.setItem(SORT_KEY, s))
+
+const view = ref<GameView>(localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid')
+watch(view, v => localStorage.setItem(VIEW_KEY, v))
 
 const playedOpen = ref(false)
 
@@ -90,20 +95,44 @@ async function closeNight() {
 
     <p v-if="error" class="error" style="margin-bottom: 12px">{{ error }}</p>
 
-    <div v-if="night.games.length" class="segmented" style="margin-bottom: 12px" role="tablist" aria-label="Tri des jeux">
-      <button
-        v-for="s in SORTS"
-        :key="s.value"
-        type="button"
-        class="segmented__item"
-        :class="{ 'segmented__item--active': sort === s.value }"
-        @click="sort = s.value"
-      >
-        {{ s.label }}
-      </button>
+    <div v-if="night.games.length" class="toolbar">
+      <div class="segmented" style="flex: 1" role="tablist" aria-label="Tri des jeux">
+        <button
+          v-for="s in SORTS"
+          :key="s.value"
+          type="button"
+          class="segmented__item"
+          :class="{ 'segmented__item--active': sort === s.value }"
+          @click="sort = s.value"
+        >
+          {{ s.label }}
+        </button>
+      </div>
+      <div class="segmented" role="tablist" aria-label="Affichage des jeux">
+        <button
+          type="button"
+          class="segmented__item segmented__item--icon"
+          :class="{ 'segmented__item--active': view === 'grid' }"
+          aria-label="Vue grille"
+          title="Vue grille"
+          @click="view = 'grid'"
+        >
+          <IconLayoutGrid :size="16" />
+        </button>
+        <button
+          type="button"
+          class="segmented__item segmented__item--icon"
+          :class="{ 'segmented__item--active': view === 'list' }"
+          aria-label="Vue liste"
+          title="Vue liste"
+          @click="view = 'list'"
+        >
+          <IconList :size="16" />
+        </button>
+      </div>
     </div>
 
-    <div v-if="night.games.length" class="grid">
+    <div v-if="night.games.length && view === 'grid'" class="grid">
       <GameCard
         v-for="item in sortedGames"
         :key="item.game.id"
@@ -114,6 +143,18 @@ async function closeNight() {
         @toggle="toggleVote(item.game.id)"
       />
     </div>
+    <ul v-else-if="night.games.length" class="list">
+      <GameRow
+        v-for="item in sortedGames"
+        :key="item.game.id"
+        :item="item"
+        :rank="voteRank.get(item.game.id) ?? null"
+        :show-rank="sort === 'votes'"
+        :voted="myVotes.has(item.game.id)"
+        :disabled="pending || night.status === 'closed'"
+        @toggle="toggleVote(item.game.id)"
+      />
+    </ul>
     <div v-else class="empty card">
       <h3>Le catalogue est vide</h3>
       <p class="small">Ajoute vos jeux dans l’onglet Jeux, ils seront tous en lice chaque soir.</p>
@@ -216,10 +257,33 @@ async function closeNight() {
   margin-bottom: 12px;
 }
 
+.toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.segmented__item--icon {
+  flex: none;
+  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .section {

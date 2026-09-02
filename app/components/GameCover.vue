@@ -32,6 +32,18 @@ watch(() => props.src, () => (failed.value = false))
   width: 100%;
   overflow: hidden;
   background: var(--surface-2);
+  container-type: inline-size;
+}
+
+@container (max-width: 72px) {
+  .cover__empty span {
+    display: none;
+  }
+
+  .cover__empty svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .cover img {
