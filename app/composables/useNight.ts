@@ -78,6 +78,9 @@ export function useNight(options: { poll?: boolean } = {}) {
       $fetch<NightDto>(`/api/nights/${nightId()}/matches`, { method: 'POST', body: { gameId, mode, results } }),
     )
 
+  const deleteMatch = (matchId: string) =>
+    run(() => $fetch<NightDto>(`/api/nights/${nightId()}/matches/${matchId}`, { method: 'DELETE' }))
+
   if (options.poll) {
     let timer: ReturnType<typeof setInterval> | undefined
     onMounted(() => {
@@ -94,5 +97,5 @@ export function useNight(options: { poll?: boolean } = {}) {
     return new Set(night.value.games.filter(g => g.voters.some(v => v.id === me)).map(g => g.game.id))
   })
 
-  return { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, saveTeams, recordMatch, myVotes }
+  return { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, saveTeams, recordMatch, deleteMatch, myVotes }
 }

@@ -99,3 +99,16 @@ export interface AddGameSubmit {
   rawgId: number | null
   coverUrl: string | null
 }
+
+export interface GameMatchDto extends MatchDto {
+  nightId: string
+  nightDate: string
+}
+
+export interface GameDetailDto {
+  game: CatalogueGameDto
+  matches: GameMatchDto[]
+  nightsCount: number
+  /** Joueur ou équipe qui a le plus souvent fini premier sur ce jeu. */
+  topWinner: { kind: 'player' | 'team'; label: string; avatar: string | null; color: string | null; wins: number } | null
+}

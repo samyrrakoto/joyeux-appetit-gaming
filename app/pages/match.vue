@@ -29,7 +29,11 @@ const gameOptions = computed(() =>
     .map(g => ({ id: g.game.id, title: g.game.title, hint: g.playedTonight ? 'joué ce soir' : g.voters.length ? plural(g.voters.length, 'vote') : '' })),
 )
 
-const gameId = ref(gameOptions.value[0]?.id ?? '')
+const route = useRoute()
+const requested = typeof route.query.game === 'string' ? route.query.game : null
+const gameId = ref(
+  (requested && gameOptions.value.some(g => g.id === requested) ? requested : null) ?? gameOptions.value[0]?.id ?? '',
+)
 const mode = ref<MatchMode>(night.value?.teams.length ? 'team' : 'solo')
 const manual = ref(false)
 const formError = ref('')

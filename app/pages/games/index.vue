@@ -6,7 +6,6 @@ const { data: games, refresh } = await useFetch<CatalogueGameDto[]>('/api/games'
 
 const filter = ref('')
 const addOpen = ref(false)
-const editing = ref<CatalogueGameDto | null>(null)
 const pending = ref(false)
 const error = ref<string | null>(null)
 
@@ -45,17 +44,6 @@ async function onAdd(payload: AddGameSubmit) {
   if (ok) addOpen.value = false
 }
 
-async function onSave(payload: { title: string; coverUrl: string | null }) {
-  if (!editing.value) return
-  const ok = await run(() => $fetch(`/api/games/${editing.value!.id}`, { method: 'PATCH', body: payload }))
-  if (ok) editing.value = null
-}
-
-async function onRemove() {
-  if (!editing.value) return
-  const ok = await run(() => $fetch(`/api/games/${editing.value!.id}`, { method: 'DELETE' }))
-  if (ok) editing.value = null
-}
 </script>
 
 <template>
@@ -80,7 +68,7 @@ async function onRemove() {
 
     <ul v-if="visible.length" class="list">
       <li v-for="g in visible" :key="g.id">
-        <button type="button" class="game" @click="editing = g">
+        <NuxtLink :to="`/games/${g.id}`" class="game">
           <GameCover :src="g.coverUrl" :title="g.title" radius="6px" class="game__cover" />
           <div class="game__text">
             <p class="game__title">{{ g.title }}</p>
@@ -88,7 +76,7 @@ async function onRemove() {
             <span v-if="!g.coverUrl" class="badge" style="margin-top: 4px"><IconPhotoOff :size="11" /> sans jaquette</span>
           </div>
           <IconChevronRight :size="18" style="color: var(--text-3)" />
-        </button>
+        </NuxtLink>
       </li>
     </ul>
     <div v-else class="empty card">
@@ -102,7 +90,6 @@ async function onRemove() {
     </button>
 
     <AddGameSheet :open="addOpen" :pending="pending" :error="error" @close="addOpen = false" @submit="onAdd" />
-    <EditGameSheet :open="!!editing" :game="editing" :pending="pending" :error="error" @close="editing = null" @save="onSave" @remove="onRemove" />
   </div>
 </template>
 

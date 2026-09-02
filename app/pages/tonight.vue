@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconDeviceGamepad2, IconDoorExit, IconRefresh, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
+import { IconDeviceGamepad2, IconDoorExit, IconRefresh, IconTrash, IconTrophy, IconUsersGroup } from '@tabler/icons-vue'
 import type { GameSort, NightGameDto } from '#shared/types'
 
 const SORT_KEY = 'joyeux-appetit-gaming:sort'
@@ -11,7 +11,7 @@ const SORTS: { value: GameSort; label: string }[] = [
 ]
 
 const { player } = usePlayer()
-const { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, myVotes } = useNight({ poll: true })
+const { night, pending, error, refresh, toggleVote, setPlayed, setStatus, setDate, deleteMatch, myVotes } = useNight({ poll: true })
 await refresh()
 
 const sort = ref<GameSort>((localStorage.getItem(SORT_KEY) as GameSort | null) ?? 'votes')
@@ -50,6 +50,11 @@ const playedTonight = computed(() => (night.value?.games ?? []).filter(g => g.pl
 async function onSavePlayed(gameIds: string[]) {
   await setPlayed(gameIds)
   playedOpen.value = false
+}
+
+async function removeMatch(matchId: string, title: string) {
+  if (!confirm(`Supprimer cette partie de ${title} ? Les scores saisis seront perdus.`)) return
+  await deleteMatch(matchId)
 }
 
 async function closeNight() {
@@ -154,6 +159,9 @@ async function closeNight() {
               </template>
             </p>
           </div>
+          <button type="button" class="btn btn--ghost btn--icon" style="width: 32px; height: 32px; color: var(--text-3)" aria-label="Supprimer la partie" @click="removeMatch(m.id, m.game.title)">
+            <IconTrash :size="15" />
+          </button>
         </li>
       </ul>
       <p v-else class="hint" style="margin-bottom: 12px">Aucun score enregistré pour l’instant.</p>
